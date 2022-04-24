@@ -127,3 +127,12 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+.idea/
+images*.hdf5
+labels*.hdf5
+train_result.png
+best_weights.h5
+model_architecture.json
+Train set/
+Test set/

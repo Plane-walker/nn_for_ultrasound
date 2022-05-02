@@ -37,6 +37,16 @@ def pre_import_data(data_type):
         for image_file in os.listdir(f'{data_type.capitalize()} set/{label}'):
             image = pydicom.read_file(f'{data_type.capitalize()} set/{label}/{image_file}')
             image = np.array(image.pixel_array)
+
+            image = image[113:739,114:983]
+            image[14:47,253:292] = 0#把"P"去掉
+            image[5:348,774:] = 0#修一修右上
+            image[590:622,768:815] = 0#修掉右下的"14"
+            image[524:574,799:807] = 0#修掉右下的两个点
+            image[366:375,800:807] = 0#修掉右侧中间部位的两个点
+            image[343:367,785:791] = 0#精修
+            image = np.array(255 * (image / 255) ** 0.5, dtype='uint8')#伽马调整，选择参数0.5          
+
             if len(image.shape) == 3:
                 image = rgb2gray(image)
             image = cv2.resize(image, dsize=(256, 256), interpolation=cv2.INTER_CUBIC)

@@ -30,7 +30,7 @@ def load_hdf5(infile):
         return f["dataset"][()]
 
 
-def pre_import_data(data_type):
+def pre_import_train_data(data_type):
     images = []
     labels = []
     for label in os.listdir(f'{data_type.capitalize()} set/'):
@@ -56,6 +56,26 @@ def pre_import_data(data_type):
     write_hdf5(np.array(images, dtype=np.float32), f'images_{data_type}.hdf5')
     write_hdf5(np.array(labels), f'labels_{data_type}.hdf5')
 
+def pre_import_test_data(data_type):
+    images = []
+    labels = []
+    for label in os.listdir(f'{data_type.capitalize()} set/'):
+        for image_file in os.listdir(f'{data_type.capitalize()} set/{label}'):
+            image = pydicom.read_file(f'{data_type.capitalize()} set/{label}/{image_file}')
+            image = np.array(image.pixel_array)
+
+            image = image[200:820,155:964]
+            image[10:38,214:250] = 0#把"M"去掉
+            image = np.array(255 * (image / 255) ** 0.5, dtype='uint8')#伽马调整，选择参数0.5          
+
+            if len(image.shape) == 3:
+                image = rgb2gray(image)
+            image = cv2.resize(image, dsize=(256, 256), interpolation=cv2.INTER_CUBIC)
+            image = normalization(image)
+            images.append(np.reshape(image, (256, 256, 1)))
+            labels.append(label.replace('.', '').encode('utf-8'))
+    write_hdf5(np.array(images, dtype=np.float32), f'images_{data_type}.hdf5')
+    write_hdf5(np.array(labels), f'labels_{data_type}.hdf5')
 
 def import_data(data_type):
     images = load_hdf5(f'images_{data_type}.hdf5')
@@ -64,5 +84,5 @@ def import_data(data_type):
 
 
 if __name__ == '__main__':
-    pre_import_data('train')
-    pre_import_data('test')
+    pre_import_train_data('train')
+    pre_import_test_data('test')

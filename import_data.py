@@ -49,9 +49,9 @@ def pre_import_train_data(data_type):
 
             if len(image.shape) == 3:
                 image = rgb2gray(image)
-            image = cv2.resize(image, dsize=(256, 256), interpolation=cv2.INTER_CUBIC)
+            image = cv2.resize(image, dsize=(1024, 768), interpolation=cv2.INTER_CUBIC)
             image = normalization(image)
-            images.append(np.reshape(image, (256, 256, 1)))
+            images.append(np.reshape(image, (1024, 768, 1)))
             labels.append(label.replace('.', '').encode('utf-8'))
     write_hdf5(np.array(images, dtype=np.float32), f'images_{data_type}.hdf5')
     write_hdf5(np.array(labels), f'labels_{data_type}.hdf5')
@@ -70,9 +70,9 @@ def pre_import_test_data(data_type):
 
             if len(image.shape) == 3:
                 image = rgb2gray(image)
-            image = cv2.resize(image, dsize=(256, 256), interpolation=cv2.INTER_CUBIC)
+            image = cv2.resize(image, dsize=(1024, 768), interpolation=cv2.INTER_CUBIC)
             image = normalization(image)
-            images.append(np.reshape(image, (256, 256, 1)))
+            images.append(np.reshape(image, (1024, 768, 1)))
             labels.append(label.replace('.', '').encode('utf-8'))
     write_hdf5(np.array(images, dtype=np.float32), f'images_{data_type}.hdf5')
     write_hdf5(np.array(labels), f'labels_{data_type}.hdf5')

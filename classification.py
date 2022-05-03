@@ -74,7 +74,7 @@ def train():
     batch_size = 64
     lr = 1e-3
     decay_rate = lr / epochs
-    model = get_model((256, 256, 1), 32, 6)
+    model = get_model((1024, 768, 1), 32, 6)
     sgd = tf.keras.optimizers.SGD(lr=lr, momentum=0.8, decay=decay_rate, nesterov=False)
     model.compile(optimizer=sgd,
                   loss='categorical_crossentropy',

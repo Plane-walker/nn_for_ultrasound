@@ -64,17 +64,13 @@ def train():
         gpu0 = gpus[0]
         tf.config.experimental.set_memory_growth(gpu0, True)
         tf.config.set_visible_devices([gpu0], "GPU")
-    images_train, labels_train = import_data('train')
-    mapping_to_numbers = {b'123': 0, b'1234': 1, b'4': 2, b'5678': 3, b'58': 4, b'67': 5}
-    labels_train_int = np.zeros((len(labels_train)))
-    for index, raw_label in enumerate(labels_train):
-        labels_train_int[index] = mapping_to_numbers[raw_label]
-    labels_train_one_hot = tf.one_hot(labels_train_int, 6)
+    train_data = import_data('train')
+    val_data = import_data('val')
     epochs = 30
     batch_size = 64
     lr = 1e-3
     decay_rate = lr / epochs
-    model = get_model((1024, 768, 1), 32, 6)
+    model = get_model((768, 1024, 1), 32, 6)
     sgd = tf.keras.optimizers.SGD(lr=lr, momentum=0.8, decay=decay_rate, nesterov=False)
     model.compile(optimizer=sgd,
                   loss='categorical_crossentropy',
@@ -91,12 +87,11 @@ def train():
                                                       patience=20,
                                                       verbose=1,
                                                       mode='min')
-    history = model.fit(images_train,
-                        labels_train_one_hot,
+    history = model.fit(train_data,
                         epochs=epochs,
-                        batch_size=batch_size,
                         shuffle=True,
-                        validation_split=0.1,
+                        validation_data=val_data,
+                        # validation_split=0.1,
                         callbacks=[checkpoint, early_stopping])
     fig = plt.figure(figsize=(6.2, 4.8))
     plt.subplot(2, 1, 1)
@@ -150,4 +145,4 @@ def test():
 
 if __name__ == '__main__':
     train()
-    test()
+    # test()

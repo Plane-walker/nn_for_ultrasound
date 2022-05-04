@@ -3,6 +3,20 @@ import h5py
 import numpy as np
 import pydicom
 import cv2
+import tensorflow as tf
+import tensorflow_io as tfio
+from sklearn.model_selection import train_test_split
+
+
+class Generator:
+    def __init__(self, file, name):
+        self.file = file
+        self.name = name
+
+    def __call__(self):
+        with h5py.File(self.file, 'r') as hf:
+            for image in hf[self.name]:
+                yield image
 
 
 def rgb2gray(rgb):
@@ -20,14 +34,15 @@ def normalization(image):
     return image_normalized
 
 
-def write_hdf5(arr, outfile):
+def write_hdf5(images, labels, outfile):
     with h5py.File(outfile, "w") as f:
-        f.create_dataset("dataset", data=arr, dtype=arr.dtype)
+        f.create_dataset("images", data=images, dtype=images.dtype)
+        f.create_dataset("labels", data=labels, dtype=labels.dtype)
 
 
 def load_hdf5(infile):
     with h5py.File(infile, "r") as f:
-        return f["dataset"][()]
+        return f["dataset"]
 
 
 def pre_import_train_data(data_type):
@@ -49,12 +64,19 @@ def pre_import_train_data(data_type):
 
             if len(image.shape) == 3:
                 image = rgb2gray(image)
-            image = cv2.resize(image, dsize=(1024, 768), interpolation=cv2.INTER_CUBIC)
-            image = normalization(image)
-            images.append(np.reshape(image, (1024, 768, 1)))
+            image = cv2.resize(image, dsize=(768, 1024), interpolation=cv2.INTER_CUBIC)
+            # image = normalization(image)
+            images.append(np.reshape(image, (768, 1024, 1)))
             labels.append(label.replace('.', '').encode('utf-8'))
-    write_hdf5(np.array(images, dtype=np.float32), f'images_{data_type}.hdf5')
-    write_hdf5(np.array(labels), f'labels_{data_type}.hdf5')
+    mapping_to_numbers = {b'123': 0, b'1234': 1, b'4': 2, b'5678': 3, b'58': 4, b'67': 5}
+    labels_int = np.zeros((len(labels)))
+    for index, raw_label in enumerate(labels):
+        labels_int[index] = mapping_to_numbers[raw_label]
+    labels_one_hot = tf.one_hot(labels_int, 6)
+    x_train, x_test, y_train, y_test = train_test_split(np.array(images, dtype=np.uint8), np.array(labels_one_hot), test_size=0.1)
+    write_hdf5(x_train, y_train, f'train.hdf5')
+    write_hdf5(x_test, y_test, f'val.hdf5')
+
 
 def pre_import_test_data(data_type):
     images = []
@@ -70,17 +92,23 @@ def pre_import_test_data(data_type):
 
             if len(image.shape) == 3:
                 image = rgb2gray(image)
-            image = cv2.resize(image, dsize=(1024, 768), interpolation=cv2.INTER_CUBIC)
+            image = cv2.resize(image, dsize=(768, 1024), interpolation=cv2.INTER_CUBIC)
             image = normalization(image)
-            images.append(np.reshape(image, (1024, 768, 1)))
+            images.append(np.reshape(image, (768, 1024, 1)))
             labels.append(label.replace('.', '').encode('utf-8'))
-    write_hdf5(np.array(images, dtype=np.float32), f'images_{data_type}.hdf5')
-    write_hdf5(np.array(labels), f'labels_{data_type}.hdf5')
+    mapping_to_numbers = {b'123': 0, b'1234': 1, b'4': 2, b'5678': 3, b'58': 4, b'67': 5}
+    labels_int = np.zeros((len(labels)))
+    for index, raw_label in enumerate(labels):
+        labels_int[index] = mapping_to_numbers[raw_label]
+    labels_one_hot = tf.one_hot(labels_int, 6)
+    write_hdf5(np.array(images, dtype=np.uint8), np.array(labels_one_hot), f'test.hdf5')
+
 
 def import_data(data_type):
-    images = load_hdf5(f'images_{data_type}.hdf5')
-    labels = load_hdf5(f'labels_{data_type}.hdf5')
-    return images, labels
+    images = tfio.IODataset.from_hdf5(f'{data_type}.hdf5', dataset='/images')
+    labels = tfio.IODataset.from_hdf5(f'{data_type}.hdf5', dataset='/labels')
+    data = tf.data.Dataset.zip((images, labels)).batch(32, drop_remainder=True).prefetch(tf.data.experimental.AUTOTUNE)
+    return data
 
 
 if __name__ == '__main__':

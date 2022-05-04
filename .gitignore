@@ -129,7 +129,7 @@ dmypy.json
 .pyre/
 
 .idea/
-images*.hdf5
+*.hdf5
 labels*.hdf5
 train_result.png
 best_weights.h5

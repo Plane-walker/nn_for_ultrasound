@@ -27,9 +27,6 @@ def normalization(image):
 
 
 def enhance_method(img):
-    for i in range(256):
-        for j in range(256):
-            img[i][j] = int(img[i][j] * 256)
     depth = cv2.CV_16S
     # 求X方向梯度（创建grad_x, grad_y矩阵）
     grad_x = cv2.Sobel(img, depth, 1, 0)
@@ -52,7 +49,6 @@ def enhance_train():
     enhance_images = []
     for i in range(7665):
         enhance_img = enhance_method(images_train[i, :, :, 0])
-        # enhance_img = normalization(enhance_img)
         enhance_img = np.expand_dims(enhance_img, axis=2)
         enhance_img = np.concatenate((enhance_img, enhance_img, enhance_img), axis=-1)
         enhance_images.append(enhance_img)
@@ -67,7 +63,6 @@ def enhance_val():
     enhance_images = []
     for i in range(852):
         enhance_img = enhance_method(images_val[i, :, :, 0])
-        # enhance_img = normalization(enhance_img)
         enhance_img = np.expand_dims(enhance_img, axis=2)
         enhance_img = np.concatenate((enhance_img, enhance_img, enhance_img), axis=-1)
         enhance_images.append(enhance_img)
@@ -82,7 +77,6 @@ def enhance_test():
     enhance_images = []
     for i in range(2676):
         enhance_img = enhance_method(images_test[i, :, :, 0])
-        # enhance_img = normalization(enhance_img)
         enhance_img = np.expand_dims(enhance_img, axis=2)
         enhance_img = np.concatenate((enhance_img, enhance_img, enhance_img), axis=-1)
         enhance_images.append(enhance_img)

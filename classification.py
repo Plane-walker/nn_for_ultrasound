@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
-from import_data import import_data
+from import_data import import_data, load_hdf5
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score, f1_score, precision_score, recall_score, classification_report, confusion_matrix
 
 
@@ -33,22 +33,23 @@ def conv_block(inputs, filters):
 
 def get_model(image_shape, filter_size, classes):
     inputs = tf.keras.layers.Input(shape=image_shape)
-    hidden = tf.keras.layers.ZeroPadding2D((3, 3))(inputs)
-    hidden = tf.keras.layers.Conv2D(32, kernel_size=7, strides=2, padding='same')(hidden)
-    hidden = tf.keras.layers.BatchNormalization()(hidden)
-    hidden = tf.keras.layers.Activation('relu')(hidden)
-    hidden = tf.keras.layers.Dropout(0.1)(hidden)
-    hidden = tf.keras.layers.MaxPool2D(pool_size=3, strides=2, padding='same')(hidden)
-    block_layers = [3, 4, 3]
-    for i in range(3):
-        if i == 0:
-            for j in range(block_layers[i]):
-                hidden = identity_block(hidden, filter_size)
-        else:
-            filter_size = filter_size * 2
-            hidden = conv_block(hidden, filter_size)
-            for j in range(block_layers[i] - 1):
-                hidden = identity_block(hidden, filter_size)
+    hidden = tf.keras.applications.resnet50.ResNet50(weights='imagenet', include_top=False, input_tensor=tf.keras.layers.Input(shape=image_shape))(inputs)
+    # hidden = tf.keras.layers.ZeroPadding2D((3, 3))(inputs)
+    # hidden = tf.keras.layers.Conv2D(32, kernel_size=7, strides=2, padding='same')(hidden)
+    # hidden = tf.keras.layers.BatchNormalization()(hidden)
+    # hidden = tf.keras.layers.Activation('relu')(hidden)
+    # hidden = tf.keras.layers.Dropout(0.1)(hidden)
+    # hidden = tf.keras.layers.MaxPool2D(pool_size=3, strides=2, padding='same')(hidden)
+    # block_layers = [3, 4, 3]
+    # for i in range(3):
+    #     if i == 0:
+    #         for j in range(block_layers[i]):
+    #             hidden = identity_block(hidden, filter_size)
+    #     else:
+    #         filter_size = filter_size * 2
+    #         hidden = conv_block(hidden, filter_size)
+    #         for j in range(block_layers[i] - 1):
+    #             hidden = identity_block(hidden, filter_size)
     hidden = tf.keras.layers.AveragePooling2D((2, 2), padding='same')(hidden)
     hidden = tf.keras.layers.Flatten()(hidden)
     hidden = tf.keras.layers.Dense(128, activation='relu')(hidden)
@@ -66,11 +67,10 @@ def train():
         tf.config.set_visible_devices([gpu0], "GPU")
     train_data = import_data('train')
     val_data = import_data('val')
-    epochs = 30
-    batch_size = 64
+    epochs = 15
     lr = 1e-3
     decay_rate = lr / epochs
-    model = get_model((768, 1024, 1), 32, 6)
+    model = get_model((256, 256, 3), 32, 6)
     sgd = tf.keras.optimizers.SGD(lr=lr, momentum=0.8, decay=decay_rate, nesterov=False)
     model.compile(optimizer=sgd,
                   loss='categorical_crossentropy',
@@ -91,7 +91,6 @@ def train():
                         epochs=epochs,
                         shuffle=True,
                         validation_data=val_data,
-                        # validation_split=0.1,
                         callbacks=[checkpoint, early_stopping])
     fig = plt.figure(figsize=(6.2, 4.8))
     plt.subplot(2, 1, 1)
@@ -112,18 +111,14 @@ def train():
 
 
 def test():
-    images_test, labels_test = import_data('test')
-    labels_test_int = np.zeros((len(labels_test)))
-    mapping_to_numbers = {b'123': 0, b'1234': 1, b'4': 2, b'5678': 3, b'58': 4, b'67': 5}
-    for index, raw_label in enumerate(labels_test):
-        labels_test_int[index] = mapping_to_numbers[raw_label]
+    images_test = load_hdf5('test.hdf5', 'images')
+    labels_test_int = tf.argmax(load_hdf5('test.hdf5', 'labels'), axis=1)
     with open(r'model_architecture.json', 'r') as file:
         model_json = file.read()
     model = tf.keras.models.model_from_json(model_json)
     model.load_weights('best_weights.h5')
     predictions = model.predict(images_test, batch_size=64, verbose=2)
     predictions_int = tf.argmax(predictions, axis=1)
-
     cm = confusion_matrix(labels_test_int, predictions_int)
     accuracy = accuracy_score(labels_test_int, predictions_int)
     recall = recall_score(labels_test_int, predictions_int, average='weighted')
@@ -145,4 +140,4 @@ def test():
 
 if __name__ == '__main__':
     train()
-    # test()
+    test()

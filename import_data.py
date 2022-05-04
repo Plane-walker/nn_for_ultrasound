@@ -31,7 +31,7 @@ def normalization(image):
     image_max = np.max(image_normalized)
     image_min = np.min(image_normalized)
     image_normalized = (image_normalized - image_min) / (image_max-image_min)
-    return image_normalized
+    return image_normalized * 255
 
 
 def write_hdf5(images, labels, outfile):
@@ -40,9 +40,9 @@ def write_hdf5(images, labels, outfile):
         f.create_dataset("labels", data=labels, dtype=labels.dtype)
 
 
-def load_hdf5(infile):
+def load_hdf5(infile, name):
     with h5py.File(infile, "r") as f:
-        return f["dataset"]
+        return f[name][()]
 
 
 def pre_import_train_data(data_type):
@@ -64,9 +64,11 @@ def pre_import_train_data(data_type):
 
             if len(image.shape) == 3:
                 image = rgb2gray(image)
-            image = cv2.resize(image, dsize=(768, 1024), interpolation=cv2.INTER_CUBIC)
+            image = cv2.resize(image, dsize=(256, 256), interpolation=cv2.INTER_CUBIC)
             # image = normalization(image)
-            images.append(np.reshape(image, (768, 1024, 1)))
+            image = np.expand_dims(image, axis=2)
+            image = np.concatenate((image, image, image), axis=-1)
+            images.append(image)
             labels.append(label.replace('.', '').encode('utf-8'))
     mapping_to_numbers = {b'123': 0, b'1234': 1, b'4': 2, b'5678': 3, b'58': 4, b'67': 5}
     labels_int = np.zeros((len(labels)))
@@ -92,9 +94,11 @@ def pre_import_test_data(data_type):
 
             if len(image.shape) == 3:
                 image = rgb2gray(image)
-            image = cv2.resize(image, dsize=(768, 1024), interpolation=cv2.INTER_CUBIC)
-            image = normalization(image)
-            images.append(np.reshape(image, (768, 1024, 1)))
+            image = cv2.resize(image, dsize=(256, 256), interpolation=cv2.INTER_CUBIC)
+            # image = normalization(image)
+            image = np.expand_dims(image, axis=2)
+            image = np.concatenate((image, image, image), axis=-1)
+            images.append(image)
             labels.append(label.replace('.', '').encode('utf-8'))
     mapping_to_numbers = {b'123': 0, b'1234': 1, b'4': 2, b'5678': 3, b'58': 4, b'67': 5}
     labels_int = np.zeros((len(labels)))
